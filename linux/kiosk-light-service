@@ -1,0 +1,21 @@
+#!/sbin/openrc-run
+
+. /etc/kiosk-display/config
+
+description="Ambient light based kiosk appearance"
+supervisor=supervise-daemon
+command=/usr/local/libexec/kiosk-light
+command_user="$KIOSK_USER"
+export KIOSK_HOME
+
+depend() {
+    need localmount
+    after udev-settle
+}
+
+start_pre() {
+    if ! printf '1\n' > /sys/class/misc/m_alsps_misc/alsactive; then
+        eerror "Failed to enable the ambient light sensor"
+        return 1
+    fi
+}

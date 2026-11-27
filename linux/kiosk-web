@@ -1,0 +1,13 @@
+#!/sbin/openrc-run
+
+. /etc/kiosk-display/config
+
+description="Local kiosk page server"
+supervisor=supervise-daemon
+command=/usr/bin/busybox-extras
+command_args="httpd -f -p 127.0.0.1:18088 -h $KIOSK_HOME/www"
+command_user="$KIOSK_USER"
+
+depend() {
+    need localmount
+}

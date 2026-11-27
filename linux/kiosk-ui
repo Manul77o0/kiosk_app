@@ -1,0 +1,14 @@
+#!/sbin/openrc-run
+
+. /etc/kiosk-display/config
+
+description="Kiosk browser"
+supervisor=supervise-daemon
+command=/usr/local/libexec/kiosk-display
+command_user="$KIOSK_USER"
+export KIOSK_HOME
+
+depend() {
+    need kiosk-xorg kiosk-web
+    after networking
+}

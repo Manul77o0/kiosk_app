@@ -83,8 +83,10 @@
       const d = new Date();
       $('hour').textContent = String(d.getHours()).padStart(2, '0');
       $('minute').textContent = String(d.getMinutes()).padStart(2, '0');
-      $('date').textContent = d.toLocaleDateString('ja-JP',
-        { month: 'long', day: 'numeric', weekday: 'short' });
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const weekday = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
+      $('date').textContent = `${month}月${day}日（${weekday}）`;
       renderCalendar(calendarMonth, d);
     }
     function renderCalendar(monthDate, today) {
@@ -304,7 +306,8 @@
           );
         }
         const sensorBanner = $('sensor-banner');
-        const sensors = Array.isArray(s.sensors) ? s.sensors : [];
+        const sensors = Array.isArray(s.sensors) &&
+          (s.sensorUpdatedAt == null || Date.now() - s.sensorUpdatedAt < 300000) ? s.sensors : [];
         sensorBanner.textContent = '';
         sensors.forEach(x => {
           const col = document.createElement('div');

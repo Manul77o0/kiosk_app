@@ -1,0 +1,11 @@
+#!/sbin/openrc-run
+
+description="Xorg framebuffer display for the kiosk"
+supervisor=supervise-daemon
+command=/usr/libexec/Xorg
+command_args=":0 -noreset -nolisten tcp -config /etc/kiosk-display/xorg.conf vt1"
+
+depend() {
+    need localmount
+    after udev-settle
+}

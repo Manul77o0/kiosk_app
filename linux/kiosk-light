@@ -1,0 +1,47 @@
+#!/bin/sh
+set -eu
+
+state="$KIOSK_HOME/www/api/state.json"
+sensor="${KIOSK_LUX_PATH:-/sys/bus/platform/drivers/als_ps/lux}"
+interval="${KIOSK_LIGHT_INTERVAL:-5}"
+
+while :; do
+    reading=$(cat "$sensor") || {
+        echo "Cannot read the ambient light sensor" >&2
+        exit 1
+    }
+    case "$reading" in
+        *" lux") lux=${reading% lux} ;;
+        *) echo "Invalid ambient light reading: $reading" >&2; exit 1 ;;
+    esac
+    case "$lux" in
+        ''|*[!0-9]*) echo "Invalid ambient light reading: $reading" >&2; exit 1 ;;
+    esac
+
+    mode=
+    if [ "$lux" -lt 70 ]; then
+        mode=dark
+    elif [ "$lux" -gt 120 ]; then
+        mode=light
+    fi
+
+    if [ -n "$mode" ]; then
+        (
+            flock -x 9
+            current=$(jq -er '.appearanceMode | select(. == "dark" or . == "light")' "$state") || {
+                echo "Invalid kiosk state: $state" >&2
+                exit 1
+            }
+            if [ "$current" != "$mode" ]; then
+                tmp=$(mktemp "${state}.XXXXXX")
+                if ! jq --arg mode "$mode" '.appearanceMode = $mode' "$state" > "$tmp"; then
+                    rm -f "$tmp"
+                    echo "Failed to update kiosk appearance" >&2
+                    exit 1
+                fi
+                mv "$tmp" "$state"
+            fi
+        ) 9>"${state}.lock"
+    fi
+    sleep "$interval"
+done

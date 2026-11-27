@@ -1,0 +1,33 @@
+#!/sbin/openrc-run
+
+. /etc/kiosk-display/config
+. /etc/kiosk-display/sensors
+
+description="SwitchBot sensor display and upload"
+supervisor=supervise-daemon
+command=/usr/bin/python3
+command_args="/usr/local/libexec/switchbot_upload.py --url $KIOSK_SENSOR_URL --header-file $KIOSK_SENSOR_HEADER --state $KIOSK_HOME/www/api/state.json --interval 60"
+command_user="$KIOSK_USER"
+respawn_delay=5
+output_logger="logger -t kiosk-sensors"
+error_logger="logger -t kiosk-sensors -p daemon.err"
+
+depend() {
+    need kiosk-web wg-quick.wg0
+    after wpa_cli
+}
+
+start_pre() {
+    if [ ! -d /sys/module/btmtksdio ]; then
+        insmod /usr/local/lib/kiosk-sensors/btmtksdio.ko || return 1
+    fi
+    if [ "$(cat /sys/module/btmtksdio/version 2>/dev/null)" != "v0.0.1.00_2022121401" ] ||
+        [ "$(basename "$(readlink /sys/bus/sdio/devices/mmc1:0001:2/driver)")" != "btmtk_sdio" ]; then
+        eerror "The expected MT7668 Bluetooth driver is not bound"
+        return 1
+    fi
+    if ! chown "$KIOSK_USER" /dev/stpbt || ! chmod 600 /dev/stpbt; then
+        eerror "Cannot grant the kiosk user access to /dev/stpbt"
+        return 1
+    fi
+}
